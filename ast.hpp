@@ -106,8 +106,14 @@ struct ast_printer
 	{ }
 
 	void operator()(const expression_node& expr) const;
+	void operator()(const expression_node& expr, int specific_indent) const;
 
 	int indent;
+};
+
+struct ast_evaluator
+{
+	expression_node operator()(const expression_node& expr) const;
 };
 
 }

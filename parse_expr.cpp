@@ -77,7 +77,8 @@ struct expression_grammar : public qi::grammar<Iterator, ast::expression_node(),
 
 		post_inc_dec = parenthetical [_val = _1] >> *( (post_inc_op | post_dec_op) [ _val = construct<ast::unary_operation_node>(_1, _val) ] );
 
-		unary =	*( (pre_inc_op | pre_dec_op | positive_op | negative_op | invert_op | not_op) ) >> post_inc_dec [_val = _1];
+		unary_op %= pre_inc_op | pre_dec_op | positive_op | negative_op | invert_op | not_op;
+		unary = ( *( unary_op ) ) [_a = _1] >> post_inc_dec [_val = _1 ];
 
 		multiplicative = unary [_val = _1] >>
 			*(
@@ -135,6 +136,7 @@ struct expression_grammar : public qi::grammar<Iterator, ast::expression_node(),
 	binary_operation_node_rule_type 	additive;
 	binary_operation_node_rule_type 	sequence;
 
+	unary_operation_rule_type 		unary_op;
 	unary_operation_rule_type 		post_inc_op;
 	unary_operation_rule_type 		post_dec_op;
 	unary_operation_rule_type 		pre_inc_op;
@@ -144,8 +146,8 @@ struct expression_grammar : public qi::grammar<Iterator, ast::expression_node(),
 	unary_operation_rule_type 		invert_op;
 	unary_operation_rule_type 		not_op;
 
-	unary_operation_node_rule_type		post_inc_dec;
-	unary_operation_node_rule_type		unary;
+	qi::rule<Iterator, ast::expression_node(), ascii::space_type> post_inc_dec;
+	qi::rule<Iterator, ast::expression_node(), qi::locals< std::vector<ast::unary_operation> >, ascii::space_type> unary;
 };
 
 }
@@ -154,11 +156,18 @@ int main(int argc, char** argv)
 {
 	std::string input;
 
-	for(int i=1; i<argc; ++i)
+	if((argc == 2) && (std::string("-") == argv[1]))
 	{
-		if(i != 1)
-			input += " ";
-		input += argv[i];
+		std::getline(std::cin, input);
+	}
+	else
+	{
+		for(int i=1; i<argc; ++i)
+		{
+			if(i != 1)
+				input += " ";
+			input += argv[i];
+		}
 	}
 
 	std::cout << "input: '" << input << "'" << std::endl;
@@ -182,8 +191,13 @@ int main(int argc, char** argv)
 	}
 
 	ast::ast_printer print;
-	std::cout << "output:" << std::endl;
-	print(expr);
+	ast::ast_evaluator eval;
+
+	std::cout << "AST:" << std::endl;
+	print(expr, 4);
+
+	std::cout << "Evaluated: ";
+	print(eval(expr));
 
 	return 0;
 }
